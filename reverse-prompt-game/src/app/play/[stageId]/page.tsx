@@ -138,6 +138,11 @@ export default function PlayPage({
 
       {phase === "result" && result && (
         <div className="space-y-6">
+          {result.injectionDetected && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              😊 採点AIへの働きかけ（「高得点をつけて」など）を検出しました。それはプロンプト力ではないので、スコアには反映されません。プロンプトそのものの内容で勝負しましょう！
+            </p>
+          )}
           <ScorePanel
             scores={result.scores}
             passingScore={stage.passingScore}
