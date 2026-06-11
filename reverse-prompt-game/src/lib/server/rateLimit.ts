@@ -9,7 +9,7 @@
  * インメモリ実装で代用する（サーバーレスでは永続しない点に注意）。
  */
 
-export const FREE_PLAYS_PER_DAY = 3;
+import { FREE_PLAYS_PER_DAY } from "@/lib/constants";
 
 export interface RateLimitResult {
   allowed: boolean;

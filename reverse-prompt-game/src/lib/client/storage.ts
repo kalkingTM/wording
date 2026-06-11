@@ -13,9 +13,15 @@ const KEYS = {
   results: "rpg.results",
 } as const;
 
+/** SSR/プリレンダリング時は localStorage が存在しないため必ずガードする */
+function isBrowser(): boolean {
+  return typeof window !== "undefined";
+}
+
 // ---- BYOK ----
 
 export function getByokKey(): string | null {
+  if (!isBrowser()) return null;
   return localStorage.getItem(KEYS.byokApiKey);
 }
 
@@ -35,6 +41,7 @@ interface DailyPlays {
 }
 
 export function getTodayPlayCount(): number {
+  if (!isBrowser()) return 0;
   const raw = localStorage.getItem(KEYS.dailyPlays);
   if (!raw) return 0;
   try {
@@ -53,6 +60,7 @@ export function incrementTodayPlayCount(): void {
 // ---- プレイ履歴（将来の成長ダッシュボード・DB移行の基盤。仕様 5-2） ----
 
 export function getPlayResults(): PlayResult[] {
+  if (!isBrowser()) return [];
   const raw = localStorage.getItem(KEYS.results);
   if (!raw) return [];
   try {

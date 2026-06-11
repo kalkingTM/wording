@@ -3,6 +3,7 @@ import { getStageById } from "@/data/stages";
 import { GeminiProvider } from "@/lib/ai/gemini";
 import { getRateLimiter } from "@/lib/server/rateLimit";
 import { AIError } from "@/types/errors";
+import { MAX_PROMPT_LENGTH } from "@/lib/constants";
 
 /**
  * 無料枠モード専用のAPIルート。開発者の環境変数キーでGeminiを呼び出す。
@@ -10,8 +11,6 @@ import { AIError } from "@/types/errors";
  *
  * 防御層: UI側のLocalStorage制限とは独立に、ここでIPベースのレート制限を必ず通す。
  */
-
-export const MAX_PROMPT_LENGTH = 2000;
 
 interface EvaluateRequestBody {
   stageId?: string;
