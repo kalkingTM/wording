@@ -103,6 +103,11 @@ function toEvaluationError(e: unknown, mode: PlayMode): EvaluationError {
             ? "Gemini側のレート制限に達しました。しばらく待ってから再試行してください。"
             : "アクセスが集中しています。時間をおいて再試行してください。",
         );
+      case "OVERLOADED":
+        return new EvaluationError(
+          e.code,
+          "AIが混み合っています。少し時間をおいて再試行してください。",
+        );
       case "SAFETY_BLOCKED":
         return new EvaluationError(
           e.code,

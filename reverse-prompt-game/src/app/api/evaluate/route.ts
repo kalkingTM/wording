@@ -43,8 +43,9 @@ export async function POST(req: NextRequest) {
   }
 
   // IPベースのレート制限（開発者キーの保護。仕様 3-1 防御層）
+  const limiter = getRateLimiter();
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const { allowed, remaining } = await getRateLimiter().check(ip);
+  const { allowed, remaining } = await limiter.check(ip);
   if (!allowed) {
     return jsonError(
       429,
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
+    await limiter.refund(ip);
     return jsonError(500, "SERVER_MISCONFIGURED", "サーバー設定エラーです。");
   }
 
@@ -67,11 +69,15 @@ export async function POST(req: NextRequest) {
       remaining,
     });
   } catch (e) {
+    // 失敗したプレイで無料枠を消費させない
+    await limiter.refund(ip);
     return mapAIError(e);
   }
 }
 
 function mapAIError(e: unknown) {
+  // 運用時の調査用。ユーザー応答には詳細を含めない（キー等の漏洩防止）
+  console.error("[/api/evaluate] AI call failed:", e);
   if (e instanceof AIError) {
     switch (e.code) {
       case "RATE_LIMITED":
@@ -85,6 +91,12 @@ function mapAIError(e: unknown) {
           422,
           e.code,
           "AIの安全フィルタにより出力できませんでした。プロンプトの表現を変えて再挑戦してください。",
+        );
+      case "OVERLOADED":
+        return jsonError(
+          503,
+          e.code,
+          "AIが混み合っています。少し時間をおいて再試行してください。",
         );
       case "TIMEOUT":
         return jsonError(504, e.code, "応答がタイムアウトしました。再試行してください。");

@@ -22,11 +22,17 @@ export class GeminiProvider implements AIProvider {
   ) {}
 
   async evaluate(input: EvaluateInput): Promise<EvaluationResult> {
-    // スキーマ不一致は1回だけ自動リトライ（仕様 3-4）
+    // スキーマ不一致と一時的過負荷（Gemini 503等）は1回だけ自動リトライ（仕様 3-4）
     try {
       return await this.evaluateOnce(input);
     } catch (e) {
-      if (e instanceof AIError && e.code === "PARSE_FAILED") {
+      if (
+        e instanceof AIError &&
+        (e.code === "PARSE_FAILED" || e.code === "OVERLOADED")
+      ) {
+        if (e.code === "OVERLOADED") {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
         return await this.evaluateOnce(input);
       }
       throw e;
@@ -57,11 +63,13 @@ export class GeminiProvider implements AIProvider {
     const text = candidate?.content?.parts?.[0]?.text;
     if (!text) throw new AIError("PARSE_FAILED", "empty response");
 
+    let parsed: unknown;
     try {
-      return JSON.parse(text) as EvaluationResult;
+      parsed = JSON.parse(text);
     } catch {
       throw new AIError("PARSE_FAILED", "invalid JSON");
     }
+    return normalizeResult(parsed);
   }
 
   async validateKey(): Promise<boolean> {
@@ -77,24 +85,77 @@ export class GeminiProvider implements AIProvider {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async request(path: string, body: unknown): Promise<any> {
-    let res: Response;
-    try {
-      res = await fetch(`${API_BASE}${path}?key=${this.apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "TimeoutError") {
-        throw new AIError("TIMEOUT");
-      }
-      throw new AIError("TIMEOUT", "network error");
-    }
-
-    if (!res.ok) {
-      throw new AIError(errorCodeFromStatus(res.status), `HTTP ${res.status}`);
-    }
-    return res.json();
+    return requestJson(`${API_BASE}${path}?key=${this.apiKey}`, body);
   }
+}
+
+/**
+ * スキーマ検証と正規化。JSONとしてパースできても欠損・範囲外の可能性があるため、
+ * サブスコアを0〜25にクランプし、合計は必ずクライアント側で再計算する
+ * （モデルに「total=100にしろ」と指示するインジェクションへのデータレベル防御を兼ねる）。
+ */
+function normalizeResult(raw: unknown): EvaluationResult {
+  const r = raw as Partial<EvaluationResult> | null;
+  const s = r?.scores as Partial<EvaluationResult["scores"]> | undefined;
+
+  const requiredStrings = [
+    r?.feedback,
+    r?.userOutput,
+    r?.improvedPrompt,
+    r?.idealOutput,
+  ];
+  if (!r || !s || requiredStrings.some((v) => typeof v !== "string" || !v.trim())) {
+    throw new AIError("PARSE_FAILED", "missing fields");
+  }
+
+  const clamp = (v: unknown): number =>
+    Math.max(0, Math.min(25, Math.round(typeof v === "number" ? v : 0)));
+
+  const clarity = clamp(s.clarity);
+  const specificity = clamp(s.specificity);
+  const structure = clamp(s.structure);
+  const fitness = clamp(s.fitness);
+
+  return {
+    scores: {
+      clarity,
+      specificity,
+      structure,
+      fitness,
+      total: clarity + specificity + structure + fitness,
+    },
+    feedback: r.feedback as string,
+    userOutput: r.userOutput as string,
+    improvedPrompt: r.improvedPrompt as string,
+    idealOutput: r.idealOutput as string,
+    injectionDetected: Boolean(r.injectionDetected),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function requestJson(url: string, body: unknown): Promise<any> {
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "TimeoutError") {
+      throw new AIError("TIMEOUT");
+    }
+    throw new AIError("TIMEOUT", "network error");
+  }
+
+  if (!res.ok) {
+    // Geminiは無効キーを 401/403 ではなく 400 (API_KEY_INVALID) で返すことがある
+    const errBody = await res.text().catch(() => "");
+    if (res.status === 400 && errBody.includes("API_KEY_INVALID")) {
+      throw new AIError("INVALID_KEY", "API key invalid");
+    }
+    throw new AIError(errorCodeFromStatus(res.status), `HTTP ${res.status}`);
+  }
+  return res.json();
 }

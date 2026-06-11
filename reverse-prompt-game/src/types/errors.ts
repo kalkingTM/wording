@@ -8,6 +8,8 @@ export type AIErrorCode =
   | "INVALID_KEY"
   /** レート超過（429）。無料枠ならBYOK誘導、BYOKならGemini側制限の案内 */
   | "RATE_LIMITED"
+  /** Gemini側の一時的な過負荷・障害（500/502/503）。再試行で回復することが多い */
+  | "OVERLOADED"
   /** Geminiのセーフティフィルタで出力がブロックされた */
   | "SAFETY_BLOCKED"
   /** タイムアウト・ネットワーク障害 */
@@ -31,5 +33,6 @@ export function errorCodeFromStatus(status: number): AIErrorCode {
   if (status === 401 || status === 403) return "INVALID_KEY";
   if (status === 429) return "RATE_LIMITED";
   if (status === 408 || status === 504) return "TIMEOUT";
+  if (status === 500 || status === 502 || status === 503) return "OVERLOADED";
   return "UNKNOWN";
 }

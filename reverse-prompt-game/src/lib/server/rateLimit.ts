@@ -17,7 +17,10 @@ export interface RateLimitResult {
 }
 
 export interface RateLimiter {
+  /** 1回分を消費する。並行リクエストの突破を防ぐため「先取り」方式 */
   check(identifier: string): Promise<RateLimitResult>;
+  /** AI呼び出しが失敗した場合に1回分を返金する（失敗でプレイ回数を減らさない） */
+  refund(identifier: string): Promise<void>;
 }
 
 /** ローカル開発用のインメモリ実装。本番では Upstash 実装に置き換える */
@@ -25,16 +28,26 @@ class InMemoryRateLimiter implements RateLimiter {
   private counts = new Map<string, { day: string; count: number }>();
 
   async check(identifier: string): Promise<RateLimitResult> {
-    const today = new Date().toISOString().slice(0, 10);
     const entry = this.counts.get(identifier);
-    const count = entry?.day === today ? entry.count : 0;
+    const count = entry?.day === today() ? entry.count : 0;
 
     if (count >= FREE_PLAYS_PER_DAY) {
       return { allowed: false, remaining: 0 };
     }
-    this.counts.set(identifier, { day: today, count: count + 1 });
+    this.counts.set(identifier, { day: today(), count: count + 1 });
     return { allowed: true, remaining: FREE_PLAYS_PER_DAY - count - 1 };
   }
+
+  async refund(identifier: string): Promise<void> {
+    const entry = this.counts.get(identifier);
+    if (entry?.day === today() && entry.count > 0) {
+      entry.count -= 1;
+    }
+  }
+}
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 let limiter: RateLimiter | null = null;
