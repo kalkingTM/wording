@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 逆プロンプトゲーム
 
-## Getting Started
+ユーザーの言語化能力（5W1H・具体と抽象・構造化）を鍛えるWebアプリ。お題に沿ってプロンプトを書くと、コーチAIが4軸ルーブリック（明確性・具体性・構造化・目的適合、各25点）で採点し、伴走型フィードバックとBefore/After比較を返します。
 
-First, run the development server:
+仕様は [`../project_spec.md`](../project_spec.md)、設計は [`ARCHITECTURE.md`](ARCHITECTURE.md) を参照。
+
+## 技術スタック
+
+- Next.js (App Router) / React / TypeScript / Tailwind CSS
+- Google Gemini API（gemini-2.5-flash、structured output）
+- Upstash Redis（サーバー側レート制限）/ Vercel
+
+## ローカル開発
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # GEMINI_API_KEY を設定
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| 環境変数 | 必須 | 説明 |
+|---|---|---|
+| `GEMINI_API_KEY` | ✅ | 無料枠モードで使う開発者キー（[Google AI Studio](https://aistudio.google.com/apikey)で取得） |
+| `UPSTASH_REDIS_REST_URL` | 本番のみ | レート制限ストア。未設定時はインメモリにフォールバック |
+| `UPSTASH_REDIS_REST_TOKEN` | 本番のみ | 同上 |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 検証コマンド
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build   # 型チェック込みの本番ビルド
+npm run lint    # ESLint
+```
 
-## Learn More
+## Vercelへのデプロイ手順
 
-To learn more about Next.js, take a look at the following resources:
+1. **GitHubリポジトリを作成**してこのプロジェクトをpushする
+2. [Vercel](https://vercel.com) で **Add New → Project** → リポジトリをインポート
+   - リポジトリのルートが `Appkaihatsu` の場合、**Root Directory に `reverse-prompt-game` を指定**する
+3. **Environment Variables** に `GEMINI_API_KEY` を設定する
+4. **Storage → Marketplace → Upstash (Redis)** を無料プランで追加する
+   - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` が自動で環境変数に注入される
+5. Deploy を実行する
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> **注意:** Upstash未設定のままデプロイするとレート制限がインスタンス毎のインメモリになり、
+> サーバーレス環境では実質無効化されます（開発者キーが保護されません）。本番では必ず手順4を行うこと。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## セキュリティ上の前提
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- BYOKモードのAPIキーはブラウザの `localStorage` のみに保存され、サーバーへは送信されない
+- 無料枠モードはサーバー側でIPベースの1日3回制限（LocalStorageの残回数表示はUX用）
+- AI応答のサブスコアはサーバー/クライアント側で0〜25にクランプし、合計は再計算する

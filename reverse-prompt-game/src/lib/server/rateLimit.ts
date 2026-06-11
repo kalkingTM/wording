@@ -4,9 +4,9 @@
  * LocalStorageの回数表示はUX用であり、開発者キーの保護は本モジュールが担う。
  * APIルートはcurl等で直接叩けるため、ここを通らない無料枠呼び出しは存在させないこと。
  *
- * 【フェーズ3で本実装】Upstash Redis（@upstash/ratelimit）によるIPベースの
- * 固定ウィンドウ制限（1日3回）に差し替える。フェーズ1〜2のローカル開発では
- * インメモリ実装で代用する（サーバーレスでは永続しない点に注意）。
+ * 実装の切替:
+ * - UPSTASH_REDIS_REST_URL / TOKEN が設定されていれば Upstash Redis（本番用）
+ * - 未設定ならインメモリ（ローカル開発用。サーバーレスでは永続しない）
  */
 
 import { FREE_PLAYS_PER_DAY } from "@/lib/constants";
@@ -50,12 +50,71 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/**
+ * 本番用: Upstash Redis のREST APIを直接叩く実装（依存パッケージ不要）。
+ * キーは `rl:{日付}:{IP}` の固定ウィンドウ方式。日付がキーに含まれるため
+ * 日替わりで自動的にリセットされ、EXPIRE は掃除用に25時間で設定する。
+ */
+class UpstashRateLimiter implements RateLimiter {
+  constructor(
+    private readonly url: string,
+    private readonly token: string,
+  ) {}
+
+  async check(identifier: string): Promise<RateLimitResult> {
+    const key = this.key(identifier);
+    try {
+      const count = Number(await this.command("INCR", key));
+      if (count === 1) {
+        await this.command("EXPIRE", key, 60 * 60 * 25);
+      }
+      if (count > FREE_PLAYS_PER_DAY) {
+        return { allowed: false, remaining: 0 };
+      }
+      return { allowed: true, remaining: FREE_PLAYS_PER_DAY - count };
+    } catch (e) {
+      // Upstash障害時はフェイルオープン（ゲームを止めない）。露出時間は短い前提
+      console.error("[rateLimit] Upstash unavailable, failing open:", e);
+      return { allowed: true, remaining: 0 };
+    }
+  }
+
+  async refund(identifier: string): Promise<void> {
+    try {
+      await this.command("DECR", this.key(identifier));
+    } catch (e) {
+      console.error("[rateLimit] refund failed:", e);
+    }
+  }
+
+  private key(identifier: string): string {
+    return `rl:${today()}:${identifier}`;
+  }
+
+  private async command(...args: (string | number)[]): Promise<unknown> {
+    const path = args.map((a) => encodeURIComponent(String(a))).join("/");
+    const res = await fetch(`${this.url}/${path}`, {
+      headers: { Authorization: `Bearer ${this.token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      throw new Error(`Upstash HTTP ${res.status}`);
+    }
+    const data = (await res.json()) as { result: unknown };
+    return data.result;
+  }
+}
+
 let limiter: RateLimiter | null = null;
 
 export function getRateLimiter(): RateLimiter {
   if (!limiter) {
-    // TODO(フェーズ3): UPSTASH_REDIS_REST_URL が設定されていれば Upstash 実装を返す
-    limiter = new InMemoryRateLimiter();
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    limiter =
+      url && token
+        ? new UpstashRateLimiter(url, token)
+        : new InMemoryRateLimiter();
   }
   return limiter;
 }

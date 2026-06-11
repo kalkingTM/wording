@@ -37,7 +37,7 @@ src/
 │   ├── client/
 │   │   └── storage.ts          # localStorage窓口（BYOKキー・残回数・プレイ履歴）
 │   └── server/
-│       └── rateLimit.ts        # 防御層（フェーズ3でUpstash Redisに差し替え）
+│       └── rateLimit.ts        # 防御層（本番: Upstash Redis / ローカル: インメモリ自動切替）
 └── types/
     ├── game.ts                 # Stage / SubScores / EvaluationResult / PlayResult
     └── errors.ts               # AIError と HTTPステータスのマッピング
@@ -50,8 +50,8 @@ src/
 - **structured output 必須**: `responseMimeType: application/json` + `responseSchema` でJSONを強制。
 - **PlayResult に schemaVersion**: 将来のDB移行・ダッシュボードでの後方互換のため。
 
-## フェーズ別の残作業
+## フェーズ進捗
 
-- フェーズ2: トップ/プレイ/結果画面、BYOK設定UI、ローディング演出
-- フェーズ3: 採点プロンプト本実装、Upstash レート制限、ステージ拡充
-- フェーズ4: インジェクション耐性・エラーハンドリング検証
+- フェーズ1〜4: 完了（2026-06-11）。エラー分類・スコア正規化・レート制限返金・
+  503自動リトライまでQA済み
+- 残: Vercelデプロイ（手順は README.md 参照）
