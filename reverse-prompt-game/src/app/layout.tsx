@@ -9,9 +9,9 @@ const notoSansJp = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: "逆プロンプトゲーム | プロンプト力を鍛える学習アプリ",
+  title: "Wording | プロンプト力を磨く AI コーチングアプリ",
   description:
-    "あなたのプロンプトをAIが採点し、伴走型コーチングでフィードバック。言語化能力を鍛えるゲーミフィケーション学習ツール。",
+    "あなたのプロンプトをAIが採点し、伴走型コーチングでフィードバック。プロンプト力を磨く学習ツール。",
 };
 
 export default function RootLayout({
@@ -25,10 +25,10 @@ export default function RootLayout({
         <header className="bg-navy-900 text-white">
           <div className="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
             <Link href="/" className="font-bold text-lg tracking-wide">
-              逆プロンプトゲーム
+              Wording
             </Link>
             <span className="text-xs text-navy-200">
-              プロンプト力を鍛える学習アプリ
+              プロンプト力を磨く AI コーチングアプリ
             </span>
           </div>
         </header>
