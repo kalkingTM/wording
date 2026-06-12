@@ -29,17 +29,17 @@ export default function Home() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-2xl bg-navy-900 px-6 py-10 text-white">
-        <h1 className="text-2xl font-bold sm:text-3xl">
+      <section className="rounded-2xl bg-gradient-to-r from-coral-50 to-white dark:from-slate-900 dark:to-slate-800 px-6 py-10 border-l-4 border-coral">
+        <h1 className="text-2xl font-bold sm:text-3xl text-slate-900 dark:text-white">
           そのプロンプト、AIに採点させてみませんか？
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-navy-100">
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-gray-400">
           お題に沿ってプロンプトを書くと、コーチAIが「明確性・具体性・構造化・目的適合」の4つの観点で採点し、
           伴走型のフィードバックとBefore/After比較で言語化能力を鍛えます。
         </p>
-        <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-navy-700/60 px-4 py-2 text-sm">
+        <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-gray-300">
           {!mounted ? (
-            <span className="text-navy-200">読み込み中…</span>
+            <span>読み込み中…</span>
           ) : byok ? (
             <>
               <span className="h-2 w-2 rounded-full bg-emerald-400" />

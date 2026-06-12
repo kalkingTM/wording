@@ -1,27 +1,29 @@
 @import "tailwindcss";
 
 /*
- * デザイントークン: 白・グレー・ネイビーを基調とした信頼感のある配色（仕様フェーズ2）。
- * グレーはTailwind標準のslateを使い、ネイビーのみ独自スケールを定義する。
+ * デザイントークン: ミニマル + コーラルアクセント（案3）
+ * ライトモード：白背景 + グレーテキスト
+ * ダークモード：深い背景 + 薄いテキスト
  */
 @theme {
-  --color-navy-50: #f2f5fa;
-  --color-navy-100: #e2e9f3;
-  --color-navy-200: #c3d1e6;
-  --color-navy-300: #97aed2;
-  --color-navy-400: #6587ba;
-  --color-navy-500: #44699f;
-  --color-navy-600: #345285;
-  --color-navy-700: #2b426c;
-  --color-navy-800: #273a5b;
-  --color-navy-900: #1d2c46;
-  --color-navy-950: #131d30;
+  --color-coral: #ff6b6b;
+  --color-coral-50: #fff5f5;
+  --color-coral-100: #ffe0e0;
+  --color-coral-600: #e84747;
+  --color-coral-700: #d43f3f;
 
   --font-sans: var(--font-noto-sans-jp), system-ui, sans-serif;
 }
 
+/* ライトモード */
 body {
-  background: #f8fafc; /* slate-50 */
-  color: #0f172a; /* slate-900 */
+  background: #ffffff;
+  color: #1a202c;
   font-family: var(--font-sans);
+}
+
+/* ダークモード */
+html.dark body {
+  background: #0f172a;
+  color: #e2e8f0;
 }

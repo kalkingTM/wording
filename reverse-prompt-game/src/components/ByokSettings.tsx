@@ -44,20 +44,20 @@ export default function ByokSettings({
   };
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
+    <section className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5">
       <div className="flex items-center justify-between">
-        <h2 className="font-bold text-navy-900">APIキー設定（BYOK）</h2>
+        <h2 className="font-bold text-slate-900 dark:text-white">APIキー設定（BYOK）</h2>
         {saved ? (
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+          <span className="rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
             設定済み・無制限プレイ
           </span>
         ) : (
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
+          <span className="rounded-full bg-gray-100 dark:bg-slate-700 px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400">
             未設定・無料モード
           </span>
         )}
       </div>
-      <p className="mt-2 text-sm text-slate-600">
+      <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
         ご自身のGemini APIキーを設定すると、回数無制限かつ入力データが学習に使われない環境でプレイできます。キーは
         <strong>このブラウザの中（localStorage）にのみ保存され、当サービスのサーバーには送信されません</strong>。
       </p>
@@ -66,7 +66,7 @@ export default function ByokSettings({
         <div className="mt-4">
           <button
             onClick={handleClear}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            className="rounded-lg border border-gray-300 dark:border-slate-600 px-4 py-2 text-sm text-slate-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700"
           >
             キーを削除して無料モードに戻す
           </button>
@@ -81,21 +81,21 @@ export default function ByokSettings({
               setTestState("idle");
             }}
             placeholder="Gemini APIキーを入力（AIza... / AQ....）"
-            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-navy-500 focus:outline-none"
+            className="flex-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-coral dark:focus:border-coral-600 focus:outline-none"
             autoComplete="off"
           />
           <div className="flex gap-2">
             <button
               onClick={handleTest}
               disabled={!keyInput.trim() || testState === "testing"}
-              className="rounded-lg border border-navy-600 px-4 py-2 text-sm font-medium text-navy-700 hover:bg-navy-50 disabled:opacity-40"
+              className="rounded-lg border border-coral px-4 py-2 text-sm font-medium text-coral hover:bg-coral-50 dark:hover:bg-coral-900/20 disabled:opacity-40 dark:border-coral-700 dark:text-coral-400"
             >
               {testState === "testing" ? "確認中…" : "キーをテスト"}
             </button>
             <button
               onClick={handleSave}
               disabled={!keyInput.trim()}
-              className="rounded-lg bg-navy-700 px-4 py-2 text-sm font-medium text-white hover:bg-navy-600 disabled:opacity-40"
+              className="rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white hover:bg-coral-600 disabled:opacity-40 dark:bg-coral-700 dark:hover:bg-coral-600"
             >
               保存
             </button>
@@ -104,10 +104,10 @@ export default function ByokSettings({
       )}
 
       {testState === "ok" && (
-        <p className="mt-2 text-sm text-emerald-600">✓ キーは有効です。保存してご利用ください。</p>
+        <p className="mt-2 text-sm text-emerald-600 dark:text-emerald-400">✓ キーは有効です。保存してご利用ください。</p>
       )}
       {testState === "ng" && (
-        <p className="mt-2 text-sm text-red-600">
+        <p className="mt-2 text-sm text-red-600 dark:text-red-400">
           ✗ キーを確認できませんでした。入力内容をお確かめください。
         </p>
       )}

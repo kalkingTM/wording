@@ -10,7 +10,7 @@ export default function StageList({ stages }: { stages: Stage[] }) {
 
   return (
     <section>
-      <h2 className="font-bold text-navy-900">ステージを選ぶ</h2>
+      <h2 className="font-bold text-slate-900 dark:text-white">ステージを選ぶ</h2>
       <div className="mt-3 grid gap-4 sm:grid-cols-2">
         {stages.map((stage) => {
           const best = Math.max(
@@ -25,32 +25,32 @@ export default function StageList({ stages }: { stages: Stage[] }) {
             <Link
               key={stage.id}
               href={`/play/${stage.id}`}
-              className="group rounded-xl border border-slate-200 bg-white p-5 transition hover:border-navy-300 hover:shadow-md"
+              className="group rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 transition hover:border-coral dark:hover:border-coral-600 hover:shadow-md dark:hover:shadow-xl"
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="text-xs font-medium text-amber-500">
                   {"★".repeat(stage.difficulty)}
-                  <span className="text-slate-200">
+                  <span className="text-gray-300 dark:text-slate-600">
                     {"★".repeat(3 - stage.difficulty)}
                   </span>
                 </span>
                 {cleared ? (
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                  <span className="rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
                     クリア済み
                   </span>
                 ) : best > 0 ? (
-                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                  <span className="rounded-full bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                     挑戦中
                   </span>
                 ) : null}
               </div>
-              <h3 className="mt-2 font-bold text-navy-900 group-hover:text-navy-600">
+              <h3 className="mt-2 font-bold text-slate-900 dark:text-white group-hover:text-coral dark:group-hover:text-coral-400">
                 {stage.title}
               </h3>
-              <p className="mt-1 line-clamp-2 text-sm text-slate-600">
+              <p className="mt-1 line-clamp-2 text-sm text-slate-600 dark:text-gray-400">
                 {stage.description}
               </p>
-              <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+              <div className="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-gray-500">
                 <span>合格ライン {stage.passingScore}点</span>
                 {best > 0 && <span>ベスト {best}点</span>}
               </div>
