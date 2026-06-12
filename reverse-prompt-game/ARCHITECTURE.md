@@ -1,6 +1,6 @@
 # アーキテクチャ概要（フェーズ1時点）
 
-逆プロンプトゲームのハイブリッドAPI方式の骨組み。詳細仕様は [`../project_spec.md`](../project_spec.md) を参照。
+Wording（プロンプト力を磨く AI コーチングアプリ）のハイブリッドAPI方式の骨組み。詳細仕様は [`../project_spec.md`](../project_spec.md) を参照。
 
 ## 2つの呼び出し経路
 
