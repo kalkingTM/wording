@@ -1,29 +1,19 @@
 @import "tailwindcss";
 
 /*
- * デザイントークン: ミニマル + コーラルアクセント（案3）
- * ライトモード：白背景 + グレーテキスト
- * ダークモード：深い背景 + 薄いテキスト
+ * デザイントークン: プレミアム・ミニマル。
+ * ウォームグレー（stone）基調 + モノクロ反転ボタン。アクセントは控えめに
+ * amber（星・ブランドドット）と emerald（成功）のみ。
+ *
+ * ダークモードは OS 設定ではなく .dark クラスで切り替える（ThemeToggle が制御）。
  */
-@theme {
-  --color-coral: #ff6b6b;
-  --color-coral-50: #fff5f5;
-  --color-coral-100: #ffe0e0;
-  --color-coral-600: #e84747;
-  --color-coral-700: #d43f3f;
+@custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
   --font-sans: var(--font-noto-sans-jp), system-ui, sans-serif;
 }
 
-/* ライトモード */
 body {
-  background: #ffffff;
-  color: #1a202c;
   font-family: var(--font-sans);
-}
-
-/* ダークモード */
-html.dark body {
-  background: #0f172a;
-  color: #e2e8f0;
+  font-feature-settings: "palt"; /* 日本語の約物詰め */
 }

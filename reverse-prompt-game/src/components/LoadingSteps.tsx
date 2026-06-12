@@ -21,26 +21,26 @@ export default function LoadingSteps() {
   }, []);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-8">
-      <ul className="space-y-3">
+    <div className="rounded-2xl border border-stone-200 bg-white p-8 shadow-sm dark:border-stone-800 dark:bg-stone-900">
+      <ul className="space-y-4">
         {STEPS.map((step, i) => (
           <li key={step} className="flex items-center gap-3 text-sm">
             {i < current ? (
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
                 ✓
               </span>
             ) : i === current ? (
-              <span className="h-6 w-6 animate-spin rounded-full border-2 border-navy-200 border-t-navy-600" />
+              <span className="h-6 w-6 animate-spin rounded-full border-2 border-stone-200 border-t-stone-900 dark:border-stone-700 dark:border-t-stone-100" />
             ) : (
-              <span className="h-6 w-6 rounded-full border-2 border-slate-200" />
+              <span className="h-6 w-6 rounded-full border-2 border-stone-100 dark:border-stone-800" />
             )}
             <span
               className={
                 i < current
-                  ? "text-slate-400"
+                  ? "text-stone-400 dark:text-stone-500"
                   : i === current
-                    ? "font-medium text-navy-900"
-                    : "text-slate-300"
+                    ? "font-medium"
+                    : "text-stone-300 dark:text-stone-600"
               }
             >
               {step}
@@ -48,7 +48,7 @@ export default function LoadingSteps() {
           </li>
         ))}
       </ul>
-      <p className="mt-6 text-xs text-slate-400">
+      <p className="mt-6 text-xs text-stone-400 dark:text-stone-500">
         AIが採点しています。10秒ほどお待ちください…
       </p>
     </div>

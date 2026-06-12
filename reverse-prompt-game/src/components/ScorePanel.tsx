@@ -23,24 +23,28 @@ export default function ScorePanel({
   const diff = previous ? scores.total - previous.scores.total : null;
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6">
-      <div className="flex items-end justify-between">
+    <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8 dark:border-stone-800 dark:bg-stone-900">
+      <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-sm text-slate-500">総合スコア</p>
+          <p className="text-sm text-stone-400 dark:text-stone-500">
+            総合スコア
+          </p>
           <p className="mt-1">
-            <span className="text-5xl font-bold text-navy-900">
+            <span className="text-6xl font-bold tabular-nums tracking-tight">
               {scores.total}
             </span>
-            <span className="ml-1 text-slate-400">/ 100</span>
+            <span className="ml-1.5 text-stone-400 dark:text-stone-500">
+              / 100
+            </span>
           </p>
           {diff !== null && (
             <p
-              className={`mt-1 text-sm font-medium ${
+              className={`mt-1.5 text-sm font-medium tabular-nums ${
                 diff > 0
-                  ? "text-emerald-600"
+                  ? "text-emerald-600 dark:text-emerald-400"
                   : diff < 0
-                    ? "text-red-500"
-                    : "text-slate-500"
+                    ? "text-red-500 dark:text-red-400"
+                    : "text-stone-400 dark:text-stone-500"
               }`}
             >
               前回から {diff > 0 ? `+${diff}` : diff} 点
@@ -50,29 +54,38 @@ export default function ScorePanel({
         <span
           className={`rounded-full px-4 py-1.5 text-sm font-bold ${
             passed
-              ? "bg-emerald-50 text-emerald-700"
-              : "bg-slate-100 text-slate-500"
+              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+              : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
           }`}
         >
-          {passed ? "クリア！" : `合格ラインまであと${passingScore - scores.total}点`}
+          {passed
+            ? "クリア！"
+            : `合格ラインまであと${passingScore - scores.total}点`}
         </span>
       </div>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-8 space-y-4">
         {AXES.map(({ key, label }) => {
           const value = scores[key];
           const prev = previous?.scores[key];
           return (
             <div key={key}>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">{label}</span>
-                <span className="font-medium text-navy-900">
+                <span className="text-stone-500 dark:text-stone-400">
+                  {label}
+                </span>
+                <span className="font-medium tabular-nums">
                   {value}
-                  <span className="text-slate-400"> / 25</span>
+                  <span className="text-stone-400 dark:text-stone-500">
+                    {" "}
+                    / 25
+                  </span>
                   {prev !== undefined && value !== prev && (
                     <span
                       className={`ml-2 text-xs ${
-                        value > prev ? "text-emerald-600" : "text-red-500"
+                        value > prev
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-500 dark:text-red-400"
                       }`}
                     >
                       ({value > prev ? "+" : ""}
@@ -81,9 +94,9 @@ export default function ScorePanel({
                   )}
                 </span>
               </div>
-              <div className="mt-1 h-2 rounded-full bg-slate-100">
+              <div className="mt-1.5 h-1.5 rounded-full bg-stone-100 dark:bg-stone-800">
                 <div
-                  className="h-2 rounded-full bg-navy-500 transition-all"
+                  className="h-1.5 rounded-full bg-stone-900 transition-all duration-700 dark:bg-stone-100"
                   style={{ width: `${Math.min(100, (value / 25) * 100)}%` }}
                 />
               </div>
