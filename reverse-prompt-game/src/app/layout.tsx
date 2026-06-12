@@ -19,6 +19,13 @@ export const metadata: Metadata = {
 /** ハイドレーション前にテーマを適用してチラつきを防ぐ（localStorage > OS設定の順） */
 const themeInitScript = `(function(){try{var s=localStorage.getItem("theme");var d=s?s==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;if(d)document.documentElement.classList.add("dark")}catch(e){}})()`;
 
+/**
+ * 背景透かしのタイル（W モノグラム大小2つを斜めに千鳥配置、168px で無限リピート）。
+ * CSS マスクとして使うため色は任意（アルファのみ参照される）。
+ * 実際の色と濃度は要素側の bg-* クラスが決める。
+ */
+const watermarkTile = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='168' height='168'%3E%3Cdefs%3E%3Cg id='w' fill='none' stroke='%23000'%3E%3Crect x='2' y='2' width='48' height='48' rx='12' stroke-width='3'/%3E%3Cpolyline points='10 17 16.5 35 23.5 21 30.5 35 37 17' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='41.5' cy='35' r='3.5' fill='%23000' stroke='none'/%3E%3C/g%3E%3C/defs%3E%3Cuse href='%23w' transform='translate(20,20) rotate(-12 20 20) scale(0.78)'/%3E%3Cuse href='%23w' transform='translate(112,110) rotate(-12 16 16) scale(0.6)'/%3E%3C/svg%3E")`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -34,20 +41,19 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="flex min-h-full flex-col bg-stone-50 text-stone-900 transition-colors dark:bg-stone-950 dark:text-stone-100">
-        {/* 背景透かし: ロゴを斜めに大小2つ配置。カードの背面に隠れる超低不透明度 */}
+        {/* 背景透かし: 小さなロゴを斜めに敷き詰めたパターン。カードの背面に隠れる超低不透明度 */}
         <div
           aria-hidden="true"
-          className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
-        >
-          <LogoMark
-            variant="outline"
-            className="absolute -right-16 -top-20 h-[26rem] w-[26rem] -rotate-12 text-stone-900/[0.05] dark:text-white/[0.06]"
-          />
-          <LogoMark
-            variant="outline"
-            className="absolute -bottom-16 -left-20 h-72 w-72 -rotate-12 text-stone-900/[0.04] dark:text-white/[0.05]"
-          />
-        </div>
+          className="pointer-events-none fixed inset-0 -z-10 bg-stone-900/[0.045] dark:bg-white/[0.055]"
+          style={{
+            WebkitMaskImage: watermarkTile,
+            maskImage: watermarkTile,
+            WebkitMaskSize: "168px 168px",
+            maskSize: "168px 168px",
+            WebkitMaskRepeat: "repeat",
+            maskRepeat: "repeat",
+          }}
+        />
         <header className="sticky top-0 z-10 border-b border-stone-200/80 bg-stone-50/80 backdrop-blur dark:border-stone-800 dark:bg-stone-950/80">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3.5">
             <Link href="/" className="flex items-center gap-2.5">
