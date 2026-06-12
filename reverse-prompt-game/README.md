@@ -24,6 +24,8 @@ npm run dev                  # http://localhost:3000
 | `UPSTASH_REDIS_REST_URL` | 本番のみ | レート制限ストア。未設定時はインメモリにフォールバック |
 | `UPSTASH_REDIS_REST_TOKEN` | 本番のみ | 同上 |
 
+> Vercel Marketplace経由でUpstashを接続した場合は `KV_REST_API_URL` / `KV_REST_API_TOKEN` が自動注入されます。コードはどちらの変数名にも対応しています。
+
 ## 検証コマンド
 
 ```bash

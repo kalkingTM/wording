@@ -109,8 +109,11 @@ let limiter: RateLimiter | null = null;
 
 export function getRateLimiter(): RateLimiter {
   if (!limiter) {
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    // Vercel Marketplace経由のUpstash連携は KV_ プレフィックスで注入されるため両対応する
+    const url =
+      process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+    const token =
+      process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
     limiter =
       url && token
         ? new UpstashRateLimiter(url, token)
