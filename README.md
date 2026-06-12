@@ -1,1 +1,1 @@
-# reverse-prompt-game
+# Wording
