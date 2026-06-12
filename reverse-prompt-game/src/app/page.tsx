@@ -33,14 +33,14 @@ export default function Home() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-600 dark:text-amber-500">
           AI Prompt Coaching
         </p>
-        <h1 className="mt-3 max-w-3xl text-3xl font-bold leading-snug tracking-tight sm:text-4xl">
-          そのプロンプト、
+        <h1 className="mt-3 max-w-3xl text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
+          Wording ひとつで、
           <br className="sm:hidden" />
-          AIに採点させてみませんか？
+          AIの答えは変わる。
         </h1>
-        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-stone-600 dark:text-stone-400">
-          お題に沿ってプロンプトを書くと、コーチAIが「明確性・具体性・構造化・目的適合」の4つの観点で採点。
-          伴走型のフィードバックとBefore/After比較で、言語化能力を鍛えます。
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+          お題に沿ってプロンプトを書くと、コーチAIが4つの観点で採点。
+          フィードバックとBefore/After比較で、言語化能力を鍛えます。
         </p>
         <div className="mt-6 inline-flex items-center gap-2.5 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-700 shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300">
           {!mounted ? (

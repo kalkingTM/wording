@@ -19,6 +19,9 @@ export const metadata: Metadata = {
 /** ハイドレーション前にテーマを適用してチラつきを防ぐ（localStorage > OS設定の順） */
 const themeInitScript = `(function(){try{var s=localStorage.getItem("theme");var d=s?s==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;if(d)document.documentElement.classList.add("dark")}catch(e){}})()`;
 
+/** 起動スプラッシュの表示判定（セッション中1回だけ）。表示後に印を付けて閉じる */
+const splashInitScript = `(function(){var r=document.documentElement;try{if(sessionStorage.getItem("splashShown"))return;sessionStorage.setItem("splashShown","1")}catch(e){}r.classList.add("show-splash");setTimeout(function(){r.classList.remove("show-splash")},2400)})()`;
+
 /**
  * 背景透かしのタイル（W モノグラム大小2つを斜めに千鳥配置、168px で無限リピート）。
  * CSS マスクとして使うため色は任意（アルファのみ参照される）。
@@ -39,8 +42,22 @@ export default function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: splashInitScript }} />
       </head>
       <body className="flex min-h-full flex-col bg-stone-50 text-stone-900 transition-colors dark:bg-stone-950 dark:text-stone-100">
+        {/* 起動スプラッシュ: ロゴとキャッチコピーを約2秒表示してフェードアウト */}
+        <div
+          id="splash"
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 z-50 items-center justify-center bg-stone-50 dark:bg-stone-950"
+        >
+          <div className="flex flex-col items-center gap-5 px-6">
+            <LogoMark className="h-16 w-16" />
+            <p className="text-center text-lg font-bold tracking-tight sm:text-xl">
+              Wording ひとつで、AIの答えは変わる。
+            </p>
+          </div>
+        </div>
         {/* 背景透かし: 小さなロゴを斜めに敷き詰めたパターン。カードの背面に隠れる超低不透明度 */}
         <div
           aria-hidden="true"
