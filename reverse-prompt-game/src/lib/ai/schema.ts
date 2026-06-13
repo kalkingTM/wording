@@ -21,6 +21,10 @@ export const evaluationResponseSchema = {
   properties: {
     scores: subScoresSchema,
     feedback: { type: "STRING", description: "伴走型コーチングのフィードバック" },
+    hint: {
+      type: "STRING",
+      description: "書き直しに向けた問いかけ形式のヒント（例文は含めない）",
+    },
     userOutput: { type: "STRING", description: "ユーザーのプロンプトをそのまま実行した出力" },
     improvedPrompt: { type: "STRING", description: "添削後の理想的なプロンプト" },
     idealOutput: { type: "STRING", description: "理想プロンプトによる出力" },
@@ -32,6 +36,7 @@ export const evaluationResponseSchema = {
   required: [
     "scores",
     "feedback",
+    "hint",
     "userOutput",
     "improvedPrompt",
     "idealOutput",

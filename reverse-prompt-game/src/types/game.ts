@@ -39,6 +39,8 @@ export interface EvaluationResult {
   scores: SubScores;
   /** 伴走型コーチングのフィードバック文 */
   feedback: string;
+  /** 書き直し挑戦に向けた問いかけ形式のヒント（答えのプロンプト例文は含めない） */
+  hint: string;
   /** Before: ユーザーのプロンプトによる実際の出力 */
   userOutput: string;
   /** AIが添削した理想のプロンプト */
@@ -60,4 +62,22 @@ export interface PlayResult {
   modelId: string;
   /** ISO 8601 */
   playedAt: string;
+  /** セッション内の何回目の挑戦か。旧データには存在しない（=1回目扱い） */
+  attempt?: 1 | 2;
+}
+
+/**
+ * 進行中の2段階セッション（1回目採点済み〜最終結果まで）。
+ * sessionStorage に保存し、リロードしても無料枠を消費した採点結果が消えないようにする。
+ */
+export interface PlaySession {
+  stageId: string;
+  firstPrompt: string;
+  firstResult: EvaluationResult;
+  modelId: string;
+  /** 2回目を採点済みならその記録（これがあれば最終結果フェーズ） */
+  secondPrompt?: string;
+  secondResult?: EvaluationResult;
+  /** 書き直しをスキップして1回目の結果を全公開した */
+  skipped?: boolean;
 }

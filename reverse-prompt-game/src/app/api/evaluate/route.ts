@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStageById } from "@/data/stages";
 import { GeminiProvider } from "@/lib/ai/gemini";
+import type { PreviousAttempt } from "@/lib/ai/provider";
 import { getRateLimiter } from "@/lib/server/rateLimit";
 import { AIError } from "@/types/errors";
 import { MAX_PROMPT_LENGTH } from "@/lib/constants";
@@ -15,6 +16,11 @@ import { MAX_PROMPT_LENGTH } from "@/lib/constants";
 interface EvaluateRequestBody {
   stageId?: string;
   userPrompt?: string;
+  /** 2回目の挑戦時のみ。1回目のプロンプトとスコア（コーチが成長に言及するための文脈） */
+  previousAttempt?: {
+    userPrompt?: unknown;
+    scores?: Record<string, unknown>;
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -42,6 +48,15 @@ export async function POST(req: NextRequest) {
     return jsonError(404, "STAGE_NOT_FOUND", "お題が見つかりません。");
   }
 
+  // 2回目の挑戦コンテキストは任意。不正な形なら無視せずエラーにする（黙殺すると総評がズレる）
+  let previousAttempt: PreviousAttempt | undefined;
+  if (body.previousAttempt !== undefined) {
+    previousAttempt = sanitizePreviousAttempt(body.previousAttempt);
+    if (!previousAttempt) {
+      return jsonError(400, "BAD_REQUEST", "リクエスト形式が不正です。");
+    }
+  }
+
   // IPベースのレート制限（開発者キーの保護。仕様 3-1 防御層）
   const limiter = getRateLimiter();
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -62,7 +77,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const provider = new GeminiProvider(apiKey);
-    const result = await provider.evaluate({ stage, userPrompt });
+    const result = await provider.evaluate({ stage, userPrompt, previousAttempt });
     return NextResponse.json({
       result,
       modelId: provider.modelId,
@@ -112,4 +127,35 @@ function mapAIError(e: unknown) {
 
 function jsonError(status: number, code: string, message: string) {
   return NextResponse.json({ error: { code, message } }, { status });
+}
+
+/**
+ * previousAttempt の検証と正規化。スコアは0〜25にクランプし合計は再計算する
+ * （クライアント申告値を採点プロンプトにそのまま流し込まないための防御）。
+ */
+function sanitizePreviousAttempt(
+  raw: NonNullable<EvaluateRequestBody["previousAttempt"]>,
+): PreviousAttempt | undefined {
+  const prompt = raw.userPrompt;
+  if (typeof prompt !== "string" || !prompt.trim()) return undefined;
+  if (prompt.length > MAX_PROMPT_LENGTH) return undefined;
+
+  const clamp = (v: unknown): number =>
+    Math.max(0, Math.min(25, Math.round(typeof v === "number" ? v : 0)));
+  const s = raw.scores ?? {};
+  const clarity = clamp(s.clarity);
+  const specificity = clamp(s.specificity);
+  const structure = clamp(s.structure);
+  const fitness = clamp(s.fitness);
+
+  return {
+    userPrompt: prompt,
+    scores: {
+      clarity,
+      specificity,
+      structure,
+      fitness,
+      total: clarity + specificity + structure + fitness,
+    },
+  };
 }

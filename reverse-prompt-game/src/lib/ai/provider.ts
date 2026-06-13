@@ -1,4 +1,4 @@
-import type { EvaluationResult, Stage } from "@/types/game";
+import type { EvaluationResult, Stage, SubScores } from "@/types/game";
 
 /**
  * AIプロバイダの抽象化レイヤ（project_spec.md 3-3）。
@@ -24,4 +24,12 @@ export interface AIProvider {
 export interface EvaluateInput {
   stage: Stage;
   userPrompt: string;
+  /** 同一セッション2回目の挑戦時のみ。コーチが成長に言及できるようにする */
+  previousAttempt?: PreviousAttempt;
+}
+
+/** 1回目の挑戦の記録。2回目の採点時にコンテキストとして渡す（内容はデータ扱い） */
+export interface PreviousAttempt {
+  userPrompt: string;
+  scores: SubScores;
 }

@@ -4,7 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import ByokSettings from "@/components/ByokSettings";
 import StageList from "@/components/StageList";
 import { stages } from "@/data/stages";
-import { FREE_PLAYS_PER_DAY } from "@/lib/constants";
+import { FREE_EVALUATIONS_PER_DAY } from "@/lib/constants";
 import { getByokKey, getTodayPlayCount } from "@/lib/client/storage";
 
 /**
@@ -24,7 +24,7 @@ export default function Home() {
 
   const byok = mounted && Boolean(getByokKey());
   const remaining = mounted
-    ? Math.max(0, FREE_PLAYS_PER_DAY - getTodayPlayCount())
+    ? Math.max(0, FREE_EVALUATIONS_PER_DAY - getTodayPlayCount())
     : null;
 
   return (
@@ -40,7 +40,7 @@ export default function Home() {
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
           お題に沿ってプロンプトを書くと、コーチAIが4つの観点で採点。
-          フィードバックとBefore/After比較で、言語化能力を鍛えます。
+          ヒントをもとに書き直してもう一度挑戦すれば、スコアの伸びがその場で見えます。
         </p>
         <div className="mt-6 inline-flex items-center gap-2.5 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-700 shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300">
           {!mounted ? (
@@ -53,7 +53,7 @@ export default function Home() {
           ) : (
             <>
               <span className="h-2 w-2 rounded-full bg-amber-500" />
-              無料モード：本日あと {remaining} 回プレイできます
+              無料モード：本日あと採点 {remaining} 回（1つのお題で最大2回）
             </>
           )}
         </div>

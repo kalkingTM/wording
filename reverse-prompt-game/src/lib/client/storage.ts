@@ -1,4 +1,4 @@
-import type { PlayResult } from "@/types/game";
+import type { PlayResult, PlaySession } from "@/types/game";
 
 /**
  * クライアント専用の localStorage ヘルパー。
@@ -80,6 +80,37 @@ export function getLastResultForStage(stageId: string): PlayResult | undefined {
   return getPlayResults()
     .filter((r) => r.stageId === stageId)
     .at(-1);
+}
+
+// ---- 進行中の2段階セッション（sessionStorage。リロードで無料枠を無駄にしない） ----
+
+const SESSION_KEY_PREFIX = "rpg.session.";
+
+export function getPlaySession(stageId: string): PlaySession | null {
+  if (!isBrowser()) return null;
+  const raw = sessionStorage.getItem(SESSION_KEY_PREFIX + stageId);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as PlaySession;
+  } catch {
+    return null;
+  }
+}
+
+export function savePlaySession(session: PlaySession): void {
+  try {
+    sessionStorage.setItem(
+      SESSION_KEY_PREFIX + session.stageId,
+      JSON.stringify(session),
+    );
+  } catch {
+    // 容量超過等で保存できなくても進行は止めない（復元できないだけ）
+  }
+}
+
+export function clearPlaySession(stageId: string): void {
+  if (!isBrowser()) return;
+  sessionStorage.removeItem(SESSION_KEY_PREFIX + stageId);
 }
 
 function today(): string {

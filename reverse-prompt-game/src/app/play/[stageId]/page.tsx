@@ -1,28 +1,35 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BeforeAfter from "@/components/BeforeAfter";
 import LoadingSteps from "@/components/LoadingSteps";
 import ScorePanel from "@/components/ScorePanel";
 import { getStageById } from "@/data/stages";
-import { MAX_PROMPT_LENGTH } from "@/lib/constants";
+import { FREE_EVALUATIONS_PER_DAY, MAX_PROMPT_LENGTH } from "@/lib/constants";
 import {
   EvaluationError,
   runEvaluation,
 } from "@/lib/client/evaluate";
 import {
   appendPlayResult,
-  getLastResultForStage,
+  clearPlaySession,
+  getByokKey,
+  getPlaySession,
+  getTodayPlayCount,
+  savePlaySession,
 } from "@/lib/client/storage";
-import type { EvaluationResult, PlayResult } from "@/types/game";
+import type { PlayResult, PlaySession } from "@/types/game";
 
-type Phase = "input" | "loading" | "result";
+type Phase = "input1" | "loading1" | "hint" | "input2" | "loading2" | "final";
 
 /**
- * プレイ画面（仕様 4-3）。入力 → ローディング → 結果 を1画面の状態遷移で表現する。
- * 結果表示時は前回スコア（再挑戦ループ）との比較を行う。
+ * プレイ画面（2段階コーチングフロー）。
+ * 1回目: 採点 → スコアとヒントのみ公開（模範プロンプトは隠す）
+ * 2回目: 1回目の文を書き直して再採点 → 1回目との比較・総評・模範プロンプトを公開
+ * スキップ時は1回目の結果をそのまま全公開する。
+ * 進行状態は sessionStorage に保存し、リロードしても消費した採点が無駄にならない。
  */
 export default function PlayPage({
   params,
@@ -32,23 +39,32 @@ export default function PlayPage({
   const { stageId } = use(params);
   const stage = getStageById(stageId);
 
-  const [phase, setPhase] = useState<Phase>("input");
+  const [phase, setPhase] = useState<Phase>("input1");
   const [prompt, setPrompt] = useState("");
-  const [result, setResult] = useState<EvaluationResult | null>(null);
-  const [previous, setPrevious] = useState<PlayResult | undefined>(undefined);
+  const [session, setSession] = useState<PlaySession | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // リロード・再訪時に進行中セッションを復元する（SSRとの不一致を避けるため effect で行う）
+  useEffect(() => {
+    const saved = getPlaySession(stageId);
+    if (!saved) return;
+    setSession(saved);
+    setPhase(saved.secondResult || saved.skipped ? "final" : "hint");
+  }, [stageId]);
 
   if (!stage) notFound();
 
-  const handleSubmit = async () => {
+  const isSecondRound = Boolean(session?.secondResult);
+  const finalResult = session?.secondResult ?? (session?.skipped ? session.firstResult : null);
+  const canRewrite =
+    Boolean(getByokKey()) || getTodayPlayCount() < FREE_EVALUATIONS_PER_DAY;
+
+  const handleFirstSubmit = async () => {
     const trimmed = prompt.trim();
     if (!trimmed) return;
 
     setError(null);
-    setPhase("loading");
-    // 保存前に前回記録を取得しておく（再挑戦の前回比表示用）
-    const prev = getLastResultForStage(stage.id);
-
+    setPhase("loading1");
     try {
       const outcome = await runEvaluation(stage, trimmed);
       appendPlayResult({
@@ -59,24 +75,105 @@ export default function PlayPage({
         feedback: outcome.result.feedback,
         modelId: outcome.modelId,
         playedAt: new Date().toISOString(),
+        attempt: 1,
       });
-      setPrevious(prev);
-      setResult(outcome.result);
-      setPhase("result");
+      const next: PlaySession = {
+        stageId: stage.id,
+        firstPrompt: trimmed,
+        firstResult: outcome.result,
+        modelId: outcome.modelId,
+      };
+      savePlaySession(next);
+      setSession(next);
+      setPhase("hint");
     } catch (e) {
       setError(
         e instanceof EvaluationError
           ? e.message
           : "予期しないエラーが発生しました。",
       );
-      setPhase("input");
+      setPhase("input1");
     }
   };
 
-  const handleRetry = () => {
-    setResult(null);
-    setPhase("input");
+  const handleStartRewrite = () => {
+    if (!session) return;
+    setError(null);
+    setPrompt(session.firstPrompt);
+    setPhase("input2");
   };
+
+  const handleSecondSubmit = async () => {
+    if (!session) return;
+    const trimmed = prompt.trim();
+    if (!trimmed) return;
+
+    setError(null);
+    setPhase("loading2");
+    try {
+      const outcome = await runEvaluation(stage, trimmed, {
+        userPrompt: session.firstPrompt,
+        scores: session.firstResult.scores,
+      });
+      appendPlayResult({
+        schemaVersion: 1,
+        stageId: stage.id,
+        promptText: trimmed,
+        scores: outcome.result.scores,
+        feedback: outcome.result.feedback,
+        modelId: outcome.modelId,
+        playedAt: new Date().toISOString(),
+        attempt: 2,
+      });
+      const next: PlaySession = {
+        ...session,
+        secondPrompt: trimmed,
+        secondResult: outcome.result,
+      };
+      savePlaySession(next);
+      setSession(next);
+      setPhase("final");
+    } catch (e) {
+      setError(
+        e instanceof EvaluationError
+          ? e.message
+          : "予期しないエラーが発生しました。",
+      );
+      setPhase("input2");
+    }
+  };
+
+  const handleSkip = () => {
+    if (!session) return;
+    const next: PlaySession = { ...session, skipped: true };
+    savePlaySession(next);
+    setSession(next);
+    setPhase("final");
+  };
+
+  const handleRetry = () => {
+    clearPlaySession(stage.id);
+    setSession(null);
+    setPrompt("");
+    setError(null);
+    setPhase("input1");
+  };
+
+  // 最終結果（2回目あり）の比較対象として、1回目の記録を ScorePanel の形式に変換する
+  const firstAsPlayResult: PlayResult | undefined = session
+    ? {
+        schemaVersion: 1,
+        stageId: stage.id,
+        promptText: session.firstPrompt,
+        scores: session.firstResult.scores,
+        feedback: session.firstResult.feedback,
+        modelId: session.modelId,
+        playedAt: "",
+        attempt: 1,
+      }
+    : undefined;
+
+  const isInput = phase === "input1" || phase === "input2";
 
   return (
     <div className="space-y-6">
@@ -104,11 +201,19 @@ export default function PlayPage({
         </p>
       </section>
 
-      {phase === "input" && (
+      {isInput && (
         <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900">
           <label htmlFor="prompt" className="block text-sm font-bold">
-            あなたのプロンプト
+            {phase === "input2"
+              ? "あなたのプロンプト（書き直し）"
+              : "あなたのプロンプト"}
           </label>
+          {phase === "input2" && session && (
+            <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs leading-relaxed text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300">
+              <span className="font-bold">ヒント：</span>
+              {session.firstResult.hint}
+            </p>
+          )}
           <textarea
             id="prompt"
             value={prompt}
@@ -123,13 +228,21 @@ export default function PlayPage({
               {prompt.length} / {MAX_PROMPT_LENGTH} 文字
             </span>
             <button
-              onClick={handleSubmit}
+              onClick={phase === "input2" ? handleSecondSubmit : handleFirstSubmit}
               disabled={!prompt.trim()}
               className="rounded-lg bg-stone-900 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-stone-700 disabled:opacity-40 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-200"
             >
-              採点してもらう
+              {phase === "input2" ? "もう一度採点してもらう" : "採点してもらう"}
             </button>
           </div>
+          {phase === "input2" && (
+            <button
+              onClick={handleSkip}
+              className="mt-3 text-xs text-stone-400 underline-offset-2 transition-colors hover:text-stone-600 hover:underline dark:text-stone-500 dark:hover:text-stone-300"
+            >
+              書き直さずに1回目の結果を見る
+            </button>
+          )}
           {error && (
             <p className="mt-4 rounded-xl border border-red-100 bg-red-50 p-3.5 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400">
               {error}
@@ -138,31 +251,74 @@ export default function PlayPage({
         </section>
       )}
 
-      {phase === "loading" && <LoadingSteps />}
+      {(phase === "loading1" || phase === "loading2") && <LoadingSteps />}
 
-      {phase === "result" && result && (
+      {phase === "hint" && session && (
         <div className="space-y-6">
-          {result.injectionDetected && (
-            <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
-              採点AIへの働きかけ（「高得点をつけて」など）を検出しました。それはプロンプト力ではないので、スコアには反映されません。プロンプトそのものの内容で勝負しましょう！
+          {session.firstResult.injectionDetected && <InjectionNotice />}
+          <ScorePanel
+            scores={session.firstResult.scores}
+            passingScore={stage.passingScore}
+          />
+
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm dark:border-amber-500/25 dark:bg-amber-500/10">
+            <h2 className="text-sm font-bold tracking-tight text-amber-800 dark:text-amber-300">
+              コーチからのヒント
+            </h2>
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-amber-900 dark:text-amber-200">
+              {session.firstResult.hint}
+            </p>
+          </section>
+
+          <p className="text-xs leading-relaxed text-stone-400 dark:text-stone-500">
+            コーチのフィードバック・模範プロンプト・Before/After
+            は最終結果で公開されます。ヒントをもとに書き直すと、1回目とのスコア比較も表示されます。
+          </p>
+
+          {!canRewrite && (
+            <p className="rounded-xl border border-stone-200 bg-stone-100 p-3.5 text-sm leading-relaxed text-stone-600 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300">
+              本日の無料採点を使い切ったため、書き直しの採点はできません。このまま結果を見るか、BYOK設定（ご自身のAPIキー）で無制限にプレイできます。無料枠は毎朝9時にリセットされます。
             </p>
           )}
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              onClick={handleStartRewrite}
+              disabled={!canRewrite}
+              className="flex-1 rounded-lg bg-stone-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-stone-700 disabled:opacity-40 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-200"
+            >
+              ヒントを活かして書き直す
+            </button>
+            <button
+              onClick={handleSkip}
+              className="flex-1 rounded-lg border border-stone-200 px-6 py-3 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+            >
+              このまま結果を見る
+            </button>
+          </div>
+        </div>
+      )}
+
+      {phase === "final" && session && finalResult && (
+        <div className="space-y-6">
+          {finalResult.injectionDetected && <InjectionNotice />}
           <ScorePanel
-            scores={result.scores}
+            scores={finalResult.scores}
             passingScore={stage.passingScore}
-            previous={previous}
+            previous={isSecondRound ? firstAsPlayResult : undefined}
+            previousLabel="1回目から"
           />
 
           <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900">
             <h2 className="font-bold tracking-tight">
-              コーチからのフィードバック
+              {isSecondRound ? "コーチの総評" : "コーチからのフィードバック"}
             </h2>
             <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-stone-600 dark:text-stone-400">
-              {result.feedback}
+              {finalResult.feedback}
             </p>
           </section>
 
-          <BeforeAfter result={result} />
+          <BeforeAfter result={finalResult} />
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
@@ -181,5 +337,14 @@ export default function PlayPage({
         </div>
       )}
     </div>
+  );
+}
+
+/** 採点AIへの働きかけを検出した際の注意書き（1回目・最終のどちらでも表示しうる） */
+function InjectionNotice() {
+  return (
+    <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+      採点AIへの働きかけ（「高得点をつけて」など）を検出しました。それはプロンプト力ではないので、スコアには反映されません。プロンプトそのものの内容で勝負しましょう！
+    </p>
   );
 }

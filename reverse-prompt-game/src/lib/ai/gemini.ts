@@ -100,6 +100,7 @@ function normalizeResult(raw: unknown): EvaluationResult {
 
   const requiredStrings = [
     r?.feedback,
+    r?.hint,
     r?.userOutput,
     r?.improvedPrompt,
     r?.idealOutput,
@@ -125,6 +126,7 @@ function normalizeResult(raw: unknown): EvaluationResult {
       total: clarity + specificity + structure + fitness,
     },
     feedback: r.feedback as string,
+    hint: r.hint as string,
     userOutput: r.userOutput as string,
     improvedPrompt: r.improvedPrompt as string,
     idealOutput: r.idealOutput as string,

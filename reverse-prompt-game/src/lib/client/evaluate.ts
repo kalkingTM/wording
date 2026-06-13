@@ -1,6 +1,7 @@
 import type { EvaluationResult, Stage } from "@/types/game";
 import { AIError } from "@/types/errors";
 import { GeminiProvider } from "@/lib/ai/gemini";
+import type { PreviousAttempt } from "@/lib/ai/provider";
 import { getByokKey, incrementTodayPlayCount } from "./storage";
 
 /**
@@ -35,21 +36,23 @@ export function getCurrentMode(): PlayMode {
 export async function runEvaluation(
   stage: Stage,
   userPrompt: string,
+  previousAttempt?: PreviousAttempt,
 ): Promise<EvaluationOutcome> {
   const byokKey = getByokKey();
   return byokKey
-    ? evaluateWithByok(byokKey, stage, userPrompt)
-    : evaluateWithFreeTier(stage, userPrompt);
+    ? evaluateWithByok(byokKey, stage, userPrompt, previousAttempt)
+    : evaluateWithFreeTier(stage, userPrompt, previousAttempt);
 }
 
 async function evaluateWithByok(
   apiKey: string,
   stage: Stage,
   userPrompt: string,
+  previousAttempt?: PreviousAttempt,
 ): Promise<EvaluationOutcome> {
   const provider = new GeminiProvider(apiKey);
   try {
-    const result = await provider.evaluate({ stage, userPrompt });
+    const result = await provider.evaluate({ stage, userPrompt, previousAttempt });
     return { result, modelId: provider.modelId, mode: "byok" };
   } catch (e) {
     throw toEvaluationError(e, "byok");
@@ -59,13 +62,14 @@ async function evaluateWithByok(
 async function evaluateWithFreeTier(
   stage: Stage,
   userPrompt: string,
+  previousAttempt?: PreviousAttempt,
 ): Promise<EvaluationOutcome> {
   let res: Response;
   try {
     res = await fetch("/api/evaluate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stageId: stage.id, userPrompt }),
+      body: JSON.stringify({ stageId: stage.id, userPrompt, previousAttempt }),
     });
   } catch {
     throw new EvaluationError(

@@ -9,7 +9,7 @@
  * - 未設定ならインメモリ（ローカル開発用。サーバーレスでは永続しない）
  */
 
-import { FREE_PLAYS_PER_DAY } from "@/lib/constants";
+import { FREE_EVALUATIONS_PER_DAY } from "@/lib/constants";
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -31,11 +31,11 @@ class InMemoryRateLimiter implements RateLimiter {
     const entry = this.counts.get(identifier);
     const count = entry?.day === today() ? entry.count : 0;
 
-    if (count >= FREE_PLAYS_PER_DAY) {
+    if (count >= FREE_EVALUATIONS_PER_DAY) {
       return { allowed: false, remaining: 0 };
     }
     this.counts.set(identifier, { day: today(), count: count + 1 });
-    return { allowed: true, remaining: FREE_PLAYS_PER_DAY - count - 1 };
+    return { allowed: true, remaining: FREE_EVALUATIONS_PER_DAY - count - 1 };
   }
 
   async refund(identifier: string): Promise<void> {
@@ -68,10 +68,10 @@ class UpstashRateLimiter implements RateLimiter {
       if (count === 1) {
         await this.command("EXPIRE", key, 60 * 60 * 25);
       }
-      if (count > FREE_PLAYS_PER_DAY) {
+      if (count > FREE_EVALUATIONS_PER_DAY) {
         return { allowed: false, remaining: 0 };
       }
-      return { allowed: true, remaining: FREE_PLAYS_PER_DAY - count };
+      return { allowed: true, remaining: FREE_EVALUATIONS_PER_DAY - count };
     } catch (e) {
       // Upstash障害時はフェイルオープン（ゲームを止めない）。露出時間は短い前提
       console.error("[rateLimit] Upstash unavailable, failing open:", e);

@@ -14,10 +14,13 @@ export default function ScorePanel({
   scores,
   passingScore,
   previous,
+  previousLabel = "前回から",
 }: {
   scores: SubScores;
   passingScore: number;
   previous?: PlayResult;
+  /** 差分表示の主語（例:「1回目から」）。2段階セッションの最終結果で使う */
+  previousLabel?: string;
 }) {
   const passed = scores.total >= passingScore;
   const diff = previous ? scores.total - previous.scores.total : null;
@@ -47,7 +50,7 @@ export default function ScorePanel({
                     : "text-stone-400 dark:text-stone-500"
               }`}
             >
-              前回から {diff > 0 ? `+${diff}` : diff} 点
+              {previousLabel} {diff > 0 ? `+${diff}` : diff} 点
             </p>
           )}
         </div>
